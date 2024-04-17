@@ -1,0 +1,58 @@
+                                        Quantitation Report    (QT Reviewed)
+
+  Data Path : F:\DATA\Adam\FLEXiGUT\Environage_POP\240308\
+  Data File : AMAP_2304_1_1.D
+  Acq On    :  9 Mar 2024   7:27
+  Operator  :
+  Sample    : AMAP_2304_1_1
+  Misc      :
+  ALS Vial  : 63   Sample Multiplier: 1
+
+  Quant Time: Apr 10 16:07:48 2024
+  Quant Method : F:\DATA\Adam\FLEXiGUT\Environage_POP\method-DA-serum2024_PCB_OCP_BDE.M
+  Quant Title  :
+  QLast Update : Thu Mar 21 12:43:28 2024
+  Response via : Initial Calibration
+
+          Compound                   R.T. QIon  Response  Conc Units Dev(Min)
+   --------------------------------------------------------------------------
+   Internal Standards
+     1) CB 143 (IS)                17.938  360   339370   12500.00 pg       0.00
+    20) 13C-HCB                    12.465  290   915194   1250.00 pg     # 0.00
+    25) BDE-103                    21.056   79    86849   1000.00 pg     # 0.00
+
+   Target Compounds                                                   Qvalue
+     2) CB 101                     16.673  326     1158m   68.74 pg
+     3) CB 99                      16.761  326     1145m  161.16 pg
+     4) CB 105                     18.331  326    11687m   69.54 pg
+     5) CB 118                     17.864  326     9061m   44.12 pg
+     6) CB 153                     18.251  360    36328m  147.92 pg
+     7) CB 138                     18.748  360    47256m  184.39 pg
+     8) CB 187                     19.018  396    14540m   42.71 pg
+     9) CB 183                     19.121  396    54180   154.48 pg        98
+    10) CB 156                     19.956  360     4619m   33.79 pg
+    11) CB 180                     19.968  396    15571    36.95 pg   #    80
+    12) CB 170                     20.469  396    31885    87.32 pg        83
+    13) CB 194                     21.559  430      550m    1.48 pg
+    14) CB 207                     21.334  464   223738   No Calib   #
+    15) pp-DDE                     17.214  318     7371m  986.60 pg
+    16) pp-DDT                     18.726   71     4235m  300.33 pg
+    17) OxC                        16.111  350     1549m   49.77 pg
+    18) TN                         16.875  444    21366   216.82 pg       100
+    19) CN                         18.042  444    21609   130.73 pg       100
+    21) HCB                        12.467  284   154346   253.94 pg        99
+    22) alpaHCH                    12.366   71       27m    0.49 pg
+    23) betaHCH                    12.910   71     4882m  214.30 pg
+    24) gammaHCH                   13.104   71      134m    3.47 pg
+    26) BDE-28                     17.981   79    11872m   99.20 pg
+    27) BDE-47                     20.099   79     5901m   63.81 pg
+    28) BDE-100                    21.594   79     3650m   49.92 pg
+    29) BDE-99                     21.981   79     8638m  126.89 pg
+    30) BDE-154                    23.033   79     2099m   51.51 pg
+    31) BDE-153                    23.684   79     3065m  132.32 pg
+    32) BDE-183                    25.963   79      362m  122.16 pg
+   --------------------------------------------------------------------------
+
+   (#) = qualifier out of range (m) = manual integration (+) = signals summed
+
+method-DA-s...CB_OCP_BDE.M Wed Apr 10 16:07:57 2024
