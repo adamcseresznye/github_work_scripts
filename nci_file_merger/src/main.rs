@@ -1,191 +1,202 @@
-use glob::glob;
-use polars::prelude::*;
+mod file_finder;
+mod parser;
+
+use crate::file_finder::find_files;
+use crate::parser::parse_fixed_width;
+
+use clap::{command, Arg, ArgMatches};
+
+use crate::parser::create_parse_config;
+use anyhow::anyhow;
+use anyhow::Result;
+use csv::Writer;
+use std::fs;
+use std::fs::OpenOptions;
 use std::path::Path;
 
-struct FileFinder {
-    file_locations: Vec<String>,
-    sample_names: Vec<String>,
-}
+fn main() {
+    let input = get_input();
 
-impl FileFinder {
-    fn new() -> Self {
-        Self {
-            file_locations: Vec::new(),
-            sample_names: Vec::new(),
-        }
+    let path = input
+        .get_one::<String>("path")
+        .expect("Invalid path provided.")
+        .as_str();
+    let input_clone = input.clone();
+    match run(input_clone) {
+        Ok(_) => println!("Success! Files were saved at {}.", path),
+        Err(e) => println!("An error occurred: {}", e),
     }
 }
 
-struct DataExtractor {
-    response_series: Vec<Series>,
-    concentration_series: Vec<Series>,
-    compound_names: Vec<Series>,
-}
+fn run(input: ArgMatches) -> Result<()> {
+    let path = input
+        .get_one::<String>("path")
+        .ok_or(anyhow!("Path argument not found"))?
+        .as_str();
+    let file = input
+        .get_one::<String>("file")
+        .ok_or(anyhow!("File argument not found"))?
+        .as_str();
+    let save = input
+        .get_one::<String>("save")
+        .ok_or(anyhow!("Save argument not found"))?
+        .as_str()
+        .parse::<bool>()
+        .map_err(|_| anyhow!("Failed to parse save argument as bool"))?;
 
-impl DataExtractor {
-    fn new() -> Self {
-        Self {
-            response_series: Vec::new(),
-            concentration_series: Vec::new(),
-            compound_names: Vec::new(),
-        }
+    let files = find_files(path, file)?;
+
+    let mut names_to_save = Vec::new();
+    let mut responses_to_save = Vec::new();
+    let mut conc_to_save = Vec::new();
+
+    for (location, name) in files.file_locations.iter().zip(files.sample_names.iter()) {
+        let contents = fs::read_to_string(location)?;
+
+        let name_config = create_parse_config(&input, "name_starts", "name_width")?;
+        let conc_config = create_parse_config(&input, "conc_starts", "conc_width")?;
+        let response_config = create_parse_config(&input, "response_starts", "response_width")?;
+
+        let mut names = parse_fixed_width(contents.as_str(), name_config);
+        let mut responses = parse_fixed_width(contents.as_str(), response_config);
+        let mut concentrations = parse_fixed_width(contents.as_str(), conc_config);
+
+        names.insert(0, "file_name".to_string());
+        responses.insert(0, name.to_string());
+        concentrations.insert(0, name.to_string());
+
+        names_to_save.push(names);
+        responses_to_save.push(responses);
+        conc_to_save.push(concentrations);
     }
-}
 
-struct ParseConfig {
-    column_starts: [i64; 6],
-    column_lengths: [i64; 6],
-    rows_to_read_in: usize,
-    rows_to_skip_beginning: usize,
-    rows_to_drop_end: usize,
-}
+    if save {
+        let responses_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(Path::new(path).join("responses.csv"))?;
+        let concentrations_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(Path::new(path).join("concentrations.csv"))?;
 
-fn find_files(path: &str, filename: &str) -> Result<FileFinder, String> {
-    let pattern = Path::new(path).join(format!("**/{}", filename));
-    let mut file_finder: FileFinder = FileFinder::new();
-    for file in glob(pattern.to_str().unwrap()).map_err(|e| e.to_string())? {
-        match file {
-            Ok(path) => {
-                file_finder.file_locations.push(path.display().to_string());
-                let parent_folder = path
-                    .parent()
-                    .and_then(|p| p.file_name())
-                    .and_then(|n| n.to_str());
-                if let Some(name) = parent_folder {
-                    file_finder.sample_names.push(name.to_string());
-                } else {
-                    return Err(String::from("Failed to get parent folder name"));
-                }
+        let mut responses_wtr = Writer::from_writer(responses_file);
+        let mut concentrations_wtr = Writer::from_writer(concentrations_file);
+
+        for (idx, row) in responses_to_save.iter().enumerate() {
+            if idx == 0 {
+                responses_wtr.write_record(&names_to_save[0])?;
             }
-            Err(e) => println!("Error: {:?}", e),
+            responses_wtr.write_record(row)?;
         }
-    }
-    Ok(file_finder)
-}
-
-fn parse_fwd_txt(config: &ParseConfig, path: &str) -> Result<DataFrame, String> {
-    // Specify columns positions and lengths, names and types of columns to parse
-    let column_names: Vec<&str> = vec![
-        "number",
-        "compound",
-        "Rt",
-        "Qion",
-        "Response",
-        "Concentration",
-    ];
-
-    // initialize a vector to "list" polars expressions, on per column
-    let mut _vec_expr: Vec<Expr> = vec![];
-
-    let mut _i = 0;
-
-    while _i < column_names.len() {
-        _vec_expr.append(&mut vec![col("l")
-            .str()
-            .slice(
-                lit(config.column_starts[_i]),
-                lit::<i64>(config.column_lengths[_i].try_into().unwrap()),
-            )
-            .alias(column_names[_i])]);
-        _i += 1;
+        for (idx, row) in conc_to_save.iter().enumerate() {
+            if idx == 0 {
+                concentrations_wtr.write_record(&names_to_save[0])?;
+            }
+            concentrations_wtr.write_record(row)?;
+        }
+        responses_wtr.flush()?;
+        concentrations_wtr.flush()?;
     }
 
-    // Read with csv reader lazily (if you have comma in the file, change the delimiter)
-    let mut data_ = LazyCsvReader::new(path)
-        // read just one column named "l" for line
-        .with_schema(Some(Arc::new(
-            Schema::from_iter(vec![Field::new(
-                "l",
-                DataType::from_arrow(&ArrowDataType::Utf8, true),
-            )])
-            .into(),
-        )))
-        .has_header(false)
-        // test 100 first lines
-        .with_n_rows(Some(config.rows_to_read_in))
-        .with_skip_rows(config.rows_to_skip_beginning)
-        .finish()
-        .map_err(|e| e.to_string())?; // Add error handling with ?
-
-    // append the polars lazyframe with the expressions generated above
-    data_ = data_.with_columns(_vec_expr);
-
-    // collect
-    let mut df = data_.collect().map_err(|e| e.to_string())?; // Add error handling with ?
-
-    // Get the number of rows in the DataFrame
-    let nrows = df.height();
-
-    // Drop the last 5 rows
-    if nrows > config.rows_to_drop_end {
-        df = df.slice(0, nrows - config.rows_to_drop_end);
-    }
-
-    Ok(df)
-}
-
-fn get_dataframes(
-    found_files: FileFinder,
-    config: ParseConfig,
-) -> Result<(DataFrame, DataFrame), String> {
-    let mut extracted_files = DataExtractor::new();
-    for (location, name) in found_files
-        .file_locations
-        .iter()
-        .zip(found_files.sample_names)
-    {
-        let temp_df = parse_fwd_txt(&config, &location)?;
-        let response = temp_df
-            .column("Response")
-            .expect("Failed to select column.")
-            .clone()
-            .rename(&name)
-            .clone();
-        let concentration = temp_df
-            .column("Concentration")
-            .expect("Failed to select column.")
-            .clone()
-            .rename(&name)
-            .clone();
-        let compound_name = temp_df.column("compound").expect("REASON").clone();
-        extracted_files.compound_names.push(compound_name);
-        extracted_files.response_series.push(response);
-        extracted_files.concentration_series.push(concentration);
-    }
-
-    // Create a new DataFrame with the first series in compound_names
-    let compound_df = DataFrame::new(vec![extracted_files.compound_names.remove(0)])
-        .expect("Failed to create DataFrame");
-
-    let response_df =
-        DataFrame::new(extracted_files.response_series).expect("Failed to create DataFrame");
-    let concentration_df =
-        DataFrame::new(extracted_files.concentration_series).expect("Failed to create DataFrame");
-
-    // Concatenate response_df onto compound_df
-    let result_response_df = compound_df
-        .hstack(response_df.get_columns())
-        .expect("Failed to concatenate DataFrames");
-    let result_concentration_df = compound_df
-        .hstack(concentration_df.get_columns())
-        .expect("Failed to concatenate DataFrames");
-    Ok((result_response_df, result_concentration_df))
-}
-
-fn main() -> Result<(), String> {
-    let files = find_files(
-        r"C:\Users\s0212777\OneDrive - Universiteit Antwerpen\Work\github_work_scripts\nci_file_merger\data",
-        "a-all.txt",
-    )?;
-    let parse_config = ParseConfig {
-        column_starts: [0, 7, 20, 41, 47, 56],
-        column_lengths: [6, 4, 5, 25, 8, 8],
-        rows_to_read_in: 100,
-        rows_to_skip_beginning: 19,
-        rows_to_drop_end: 5,
-    };
-
-    let extracted_dfs = get_dataframes(files, parse_config)?;
-    println!("{:?}, {:?}", extracted_dfs.0, extracted_dfs.1);
     Ok(())
 }
+
+fn get_input() -> ArgMatches {
+    let input = command!()
+    .about("A command-line utility designed to extract concentration and peak area data from files generated on the Agilent 5973 (NCI).")
+        .arg(
+            Arg::new("path")
+        .long("path")
+        .short('p')
+        .required(true)
+        .help(
+            r"The root directory of the project. For instance, C:\Users\myname\myproject.",
+        ))
+        .arg(
+            Arg::new("file")
+        .long("file")
+        .short('f')
+        .default_value("a-all.txt")
+        .help(
+            r"The common file name that contains the peak areas and concentration data. Default is 'a-all.txt'.",
+        )
+        )
+        .arg(
+            Arg::new("save")
+        .long("save")
+        .help(
+            r"Determines whether the files should be saved. Default is true.",
+        )
+        .default_value("true")
+        )
+        .arg(
+            Arg::new("name_starts")
+        .long("name_starts")
+        .default_value("8")
+        .help(
+            r"The starting position of the name column. Default is 8.",
+        )
+        )
+        .arg(
+            Arg::new("name_width")
+        .long("name_width")
+        .default_value("20")
+        .help(
+            r"The width of the name column. Default is 20.",
+        )
+        )
+        .arg(
+            Arg::new("response_starts")
+        .long("response_starts")
+        .default_value("49")
+        .help(
+            r"The starting position of the response column. Default is 49.",
+        )
+        )
+        .arg(
+            Arg::new("response_width")
+        .long("response_width")
+        .default_value("6")
+        .help(
+            r"The width of the response column. Default is 6.",
+        )
+        )
+        .arg(
+            Arg::new("conc_starts")
+        .long("conc_starts")
+        .default_value("56")
+        .help(
+            r"The starting position of the concentration column. Default is 56.",
+        )
+        )
+        .arg(
+            Arg::new("conc_width")
+        .long("conc_width")
+        .default_value("9")
+        .help(
+            r"The width of the concentration column. Default is 9.",
+        )
+        )
+        .arg(
+            Arg::new("rows_to_skip_beginning")
+        .long("rows_to_skip_beginning")
+        .default_value("19")
+        .help(
+            r"The number of rows to skip at the beginning of the file. Default is 19.",
+        )
+        )
+        .arg(
+            Arg::new("rows_to_take")
+        .long("rows_to_take")
+        .default_value("25")
+        .help(
+            r"The number of rows to process from the top of the file. Default is 25.",
+        )
+    )
+        .get_matches();
+
+    input
+}
+
+// 339370
