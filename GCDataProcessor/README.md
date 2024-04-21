@@ -1,6 +1,8 @@
 This is a CLI application designed to read and process data files, specifically those named ‘a-all.txt’,
 which were obtained from the old-GC. The processed data is then prepared for subsequent data analysis.
 
+**Note**: This CLI is similar to [nci_file_merger](https://github.com/adamcseresznye/github_work_scripts/tree/main/nci_file_merger) but this one is written in Python 🐍.
+
 ```
 This program scans a specified directory for GC result files named
   'a-all.txt',  processes the data, and optionally exports the concentration
