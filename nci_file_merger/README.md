@@ -3,7 +3,7 @@ A command-line utility written in Rust 🦀, designed to extract concentration a
 
 # 📖 Instructions for Use
 
-1. Open Powershell and navigate to the directory containing the downloaded `nci_file_merger.exe` executable. For example:  
+1. Open Powershell and navigate to the directory containing the [downloaded](https://github.com/adamcseresznye/github_work_scripts/releases) `nci_file_merger.exe` executable. For example:  
    `cd "C:\Users\MyUserName\Folder_nci_file_merger"`  
 
 2. Run the NCI File Merger command-line interface (CLI) with the desired parameters:  
