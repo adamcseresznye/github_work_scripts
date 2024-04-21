@@ -10,9 +10,9 @@ A command-line utility written in Rust 🦀, designed to extract concentration a
    `.\nci_file_merger --path "C:\Users\MyUserName\Folder_gc_files" --rows_to_skip_beginning 5 --rows_to_take 20`  
    In this example, `--path` specifies the root directory of the folder containing the data files.
 
-3. Initially, you can adjust the desired parameters by setting the `--save` option to `false`. This will print the result to the terminal, allowing for quicker iteration to find the most optimal parameters (such as start and width of columns). 
+3. Initially, you can adjust the desired parameters by setting the `--save` option to `false`. This will print the result to the terminal, allowing for quicker iteration to find the most optimal [parameters](https://github.com/adamcseresznye/github_work_scripts/tree/main/nci_file_merger#-options) (such as start and width of columns). 
 
-4. Once you're satisfied with the result, you can save the results to CSV files by setting `--save` to `true`.
+4. Once you're satisfied with the settings, you can save the results to CSV files by setting `--save` to `true`.
 
 ## 🤔 Options:
 **Please Note**: A comprehensive list of available options can be obtained by executing `.\nci_file_merger --help`.
