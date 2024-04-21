@@ -19,11 +19,21 @@ fn main() {
 
     let path = input
         .get_one::<String>("path")
-        .expect("Invalid path provided.")
+        .expect("Path argument not found")
         .as_str();
+
+    let save_str = input
+        .get_one::<String>("save")
+        .expect("Save argument not found.");
+
+    let save: bool = save_str.parse().unwrap_or(false);
+
     let input_clone = input.clone();
     match run(input_clone) {
-        Ok(_) => println!("Success! Files were saved at {}.", path),
+        Ok(_) if save => println!("Success! Files were saved at {}.", path),
+        Ok(_) => println!(
+            "Success! Your files have been successfully extracted. When you’re prepared to save your files to a CSV, simply apply the --save true command."
+        ),
         Err(e) => println!("An error occurred: {}", e),
     }
 }
@@ -97,8 +107,13 @@ fn run(input: ArgMatches) -> Result<()> {
         }
         responses_wtr.flush()?;
         concentrations_wtr.flush()?;
+    } else {
+        println!("Extracted responses:");
+        responses_to_save.iter().for_each(|x| println!("{:?}", &x));
+        println!("");
+        println!("Extracted concentrations:");
+        conc_to_save.iter().for_each(|x| println!("{:?}", &x));
     }
-
     Ok(())
 }
 
@@ -126,7 +141,7 @@ fn get_input() -> ArgMatches {
             Arg::new("save")
         .long("save")
         .help(
-            r"Determines whether the files should be saved. Default is true.",
+            r"Set to true to save files to CSV. Set to false to display files on the command line. Default is true.",
         )
         .default_value("true")
         )
