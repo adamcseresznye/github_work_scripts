@@ -10,8 +10,12 @@ pub struct ParseConfig {
     pub rows_to_take: usize,
 }
 
-pub fn parse_fixed_width(data: &str, parse_config: ParseConfig) -> Vec<String> {
-    data.lines()
+pub fn parse_fixed_width(
+    data: &str,
+    parse_config: ParseConfig,
+) -> Result<Vec<String>, anyhow::Error> {
+    Ok(data
+        .lines()
         .skip(parse_config.rows_to_skip_beginning)
         .take(parse_config.rows_to_take)
         .filter_map(|line| {
@@ -20,7 +24,7 @@ pub fn parse_fixed_width(data: &str, parse_config: ParseConfig) -> Vec<String> {
             )
         })
         .map(|field| field.trim().to_owned())
-        .collect()
+        .collect())
 }
 
 pub fn create_parse_config(
