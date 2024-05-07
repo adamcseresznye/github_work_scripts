@@ -1,3 +1,19 @@
+//! The `main.rs` file is the entry point of the application.
+//!
+//! It includes two functions: `main` and `get_input`.
+//!
+//! The `main` function gets the input arguments, runs the pipeline, and handles any errors that occur.
+//!
+//! The `get_input` function is a helper function that sets up the command line interface and gets the input arguments.
+//!
+//! # Examples
+//!
+//! ```
+//! use crate::main::{main, get_input};
+//!
+//! main().unwrap();
+//! ```
+
 mod file_finder;
 mod parser;
 mod pipeline;
@@ -7,6 +23,13 @@ use clap::{command, Arg, ArgMatches};
 use crate::pipeline::run;
 use anyhow::Result;
 
+/// The `main` function is the entry point of the application.
+///
+/// It gets the input arguments by calling the `get_input` function, runs the pipeline by calling the `run` function from the `pipeline` module, and handles any errors that occur.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns `Ok(())` if the pipeline runs successfully, or an error if an error occurs.
 fn main() -> Result<()> {
     let input = get_input();
 
@@ -16,6 +39,13 @@ fn main() -> Result<()> {
     }
 }
 
+/// The `get_input` function sets up the command line interface and gets the input arguments.
+///
+/// It uses the `clap` crate to set up the command line interface. It specifies the required and optional arguments, their default values, and their help messages.
+///
+/// # Returns
+///
+/// * `ArgMatches` - Returns the matches of the command line arguments.
 fn get_input() -> ArgMatches {
     let input = command!()
     .about("A command-line utility designed to extract concentration and peak area data from files generated on the Agilent 5973 (NCI).")

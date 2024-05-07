@@ -1,7 +1,33 @@
-use crate::file_finder::find_files;
+//! The `pipeline` module provides functionality for processing files.
+//!
+//! It includes several functions: `run`, `parse_argument`, `process_files`, `create_dataframe`, and `save_dataframes`.
+//!
+//! The `run` function is the main function that orchestrates the processing of files. It takes command line arguments, finds files, processes them, and optionally saves the results.
+//!
+//! The `parse_argument` function is a helper function that parses a command line argument and returns an error if the argument is not provided.
+//!
+//! The `process_files` function processes the files found by the `FileFinder`. It creates dataframes for response and concentration data, and filters out any rows to drop.
+//!
+//! The `create_dataframe` function creates a dataframe from the contents of a file. It uses the `parser` module to parse the fixed-width data.
+//!
+//! The `save_dataframes` function saves the dataframes to CSV files. It takes a path and a vector of dataframes as arguments.
+//!
+//! # Examples
+//!
+//! ```
+//! use crate::pipeline::{run, parse_argument, process_files, create_dataframe, save_dataframes};
+//! use clap::ArgMatches;
+//!
+//! let input = ArgMatches::new(); // Assume this is filled with actual arguments
+//! run(&input).unwrap();
+//! ```
+//!
+//! This module is part of a larger application that processes data from files.
+
+use crate::file_finder;
 use crate::file_finder::FileFinder;
-use crate::parser::create_parse_config;
-use crate::parser::parse_fixed_width;
+use crate::parser;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -11,6 +37,8 @@ use std::path::Path;
 
 use std::fs;
 
+/// The `run` function is the main function that orchestrates the processing of files.
+/// It takes command line arguments, finds files, processes them, and optionally saves the results.
 pub fn run(input: &ArgMatches) -> Result<()> {
     let path = parse_argument(
         input,
@@ -30,7 +58,7 @@ pub fn run(input: &ArgMatches) -> Result<()> {
         .get_one::<String>("row_to_drop")
         .and_then(|s| s.parse::<usize>().ok());
 
-    let files = find_files(path.as_str(), file.as_str())?;
+    let files = file_finder::find_files(path.as_str(), file.as_str())?;
 
     let (response_df, concentration_df) = process_files(&files, input, row_to_drop)?;
 
@@ -47,6 +75,7 @@ pub fn run(input: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
+/// The `parse_argument` function is a helper function that parses a command line argument and returns an error if the argument is not provided.
 fn parse_argument(input: &ArgMatches, arg: &str, error_msg: &str) -> Result<String> {
     input
         .get_one::<String>(arg)
@@ -54,6 +83,8 @@ fn parse_argument(input: &ArgMatches, arg: &str, error_msg: &str) -> Result<Stri
         .cloned()
 }
 
+/// The `process_files` function processes the files found by the `FileFinder`.
+/// It creates dataframes for response and concentration data, and filters out any rows to drop.
 fn process_files(
     files: &FileFinder,
     input: &ArgMatches,
@@ -100,6 +131,8 @@ fn process_files(
     Ok((response_df, concentration_df))
 }
 
+/// The `create_dataframe` function creates a dataframe from the contents of a file.
+/// It uses the `parser` module to parse the fixed-width data.
 fn create_dataframe(
     input: &ArgMatches,
     name: &str,
@@ -107,11 +140,13 @@ fn create_dataframe(
     config_starts: &str,
     config_width: &str,
 ) -> Result<Series, anyhow::Error> {
-    let config = create_parse_config(input, config_starts, config_width)?;
-    let parsed_data = parse_fixed_width(contents, config)?;
+    let config = parser::create_parse_config(input, config_starts, config_width)?;
+    let parsed_data = parser::parse_fixed_width(contents, config)?;
     Ok(Series::new(name, parsed_data))
 }
 
+/// The `save_dataframes` function saves the dataframes to CSV files.
+/// It takes a path and a vector of dataframes as arguments.
 fn save_dataframes(path: &str, dataframes: Vec<DataFrame>) -> Result<()> {
     for (file_name, df) in ["peak_areas.csv", "concentrations.csv"]
         .iter()
